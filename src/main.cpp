@@ -1,86 +1,67 @@
 #include <iostream>
 #include <conio.h>
 #include <string>
-#include <cpr/cpr.h>
-#include <nlohmann/json.hpp>
-
-using json = nlohmann::json;
+#include <libRbxUserInfo.hpp>
 
 int main() {
-	int select;
-	std::string userID;
-	std::string username;
-	bool usernameError;
-	int endSelect;
+	std::cout.setf(std::ios::boolalpha);
+	RbxUserInfo::User user;
+
 	while (true) {
-		usernameError = false;
-		std::cout << "Select input type" << "\n" << "[U]sername" << "\n" << "User[I]D" << "\n";
-		do {
-			select = _getch();
-		} while ((select != 'u') && (select != 'i'));
 		system("cls");
 
-		if (select == 'i') {
+		std::cout << "Select input type" << "\n" << "[U]sername" << "\n" << "User[I]D" << "\n";
+
+		int mainSelect;
+		do {
+			mainSelect = _getch();
+		} while ((mainSelect != 'u') && (mainSelect != 'i'));
+		system("cls");
+
+		if (mainSelect == 'i') {
 			std::cout << "Please enter a UserID: ";
-			std::cin >> userID;
-		}
-		else if (select == 'u') {
-			std::cout << "Please enter a Username: ";
-			std::cin >> username;
-			system("cls");
-			cpr::Response nameToID = cpr::Get(cpr::Url{ "https://api.roblox.com/users/get-by-username?username=" + username });
-			json nameToIDParse = json::parse(nameToID.text);
-			if (nameToIDParse.contains("errorMessage")) {
-				std::cout << nameToIDParse.at("errorMessage") << "\n";
-				usernameError = true;
+			int userID = -1;
+			std::string in;
+			std::cin >> in;
+			try {
+				userID = std::stoi(in);
+			}
+			catch (std::exception& e) {
+				std::cout << "Invalid UserID\n";
 				system("pause");
-				system("cls");
+				continue;
 			}
-			else if (nameToIDParse.contains("success")) {
-				if (nameToIDParse.at("success") == false) {
-					std::cout << "Unknown error with username to UserID API" << "\n";
-					usernameError = true;
-					system("pause");
-					system("cls");
-				}
-			}
-			else {
-				userID = to_string(nameToIDParse.at("Id"));
-			}
+			user = RbxUserInfo::GetInfoByID(userID);
+		}
+		else if (mainSelect == 'u') {
+			std::cout << "Please enter a Username: ";
+			std::string username = "";
+			std::cin >> username;
+			user = RbxUserInfo::GetInfoByUsername(username);
 		}
 
 		while (true) {
-			if (usernameError == true) {
+			if (user.userID == -1) {
+				std::cout << "Failed to get user info. Please confirm the username or UserID is valid!\n";
+				system("pause");
 				break;
 			}
 			system("cls");
-			cpr::Response userInfo = cpr::Get(cpr::Url{ "https://users.roblox.com/v1/users/" + userID });
-			cpr::Response onlineStat = cpr::Get(cpr::Url{ "https://api.roblox.com/users/" + userID + "/onlinestatus/" });
-			if (userInfo.status_code != 200 || onlineStat.status_code != 200) {
-				std::cout << "Invalid UserID" << "\n";
-				system("pause");
-				system("cls");
-				break;
-			}
-			json userInfoParse = json::parse(userInfo.text);
-			json onlineStatParse = json::parse(onlineStat.text);
+
 			std::cout << "USER INFO\n---------" << "\n";
-			std::cout << "UserID: " << userInfoParse.at("id") << "\n" << "Name: " << userInfoParse.at("name") << "\n" << "DisplayName: " << userInfoParse.at("displayName") << "\n" << "Description: " << userInfoParse.at("description") << "\n" << "Created: " << userInfoParse.at("created") << "\n" << "IsBanned: " << userInfoParse.at("isBanned") << "\n" << "\n";
+			std::cout << "UserID: " << user.userID << "\n" << "Username: " << user.username << "\n" << "Display Name: " << user.displayName << "\n" << "Description: " << user.description << "\n" << "Creation Date: " << user.creationDate << "\n" << "Banned: " << user.banned << "\n" << "\n";
 			std::cout << "ONLINE STATUS\n-------------" << "\n";
-			std::cout << "GameID: " << onlineStatParse.at("GameId") << "\n" << "PlaceID: " << onlineStatParse.at("PlaceId") << "\n" << "UniverseID: " << onlineStatParse.at("UniverseId") << "\n" << "IsOnline: " << onlineStatParse.at("IsOnline") << "\n" << "LastOnline: " << onlineStatParse.at("LastOnline") << "\n" << "LastLocation: " << onlineStatParse.at("LastLocation") << "\n" << "LocationType: " << onlineStatParse.at("LocationType") << "\n" << "PresenceType: " << onlineStatParse.at("PresenceType") << "\n" << "\n";
+			std::cout << "GameID: " << user.gameID << "\n" << "PlaceID: " << user.placeID << "\n" << "UniverseID: " << user.universeID << "\n" << "Online: " << user.isOnline << "\n" << "Last Online: " << user.lastOnline << "\n" << "Last Location: " << user.lastLocation << "\n" << "Location Type: " << user.locationType << "\n" << "Presence Type: " << user.presenceType << "\n" << "\n";
 			
 			std::cout << "[R]efresh" << "\n" << "[N]ew User" << "\n" << "[Q]uit" << "\n";
+			int endSelect;
 			do {
 				endSelect = _getch();
 			} while ((endSelect != 'r') && (endSelect != 'n') && (endSelect != 'q'));
 			
-			if (endSelect == 'n') {
-				system("cls");
-				break;
-			}
-			else if (endSelect == 'q') {
-				return 0;
-			}
+			if (endSelect == 'r') {user = RbxUserInfo::GetInfoByID(user.userID);}
+			else if (endSelect == 'n') {break;}
+			else if (endSelect == 'q') {return 0;}
 		}
 	}
 }
